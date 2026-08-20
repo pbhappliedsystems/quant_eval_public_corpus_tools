@@ -1,0 +1,18 @@
+# quant_eval public corpus — explicit run selection
+# Paths are relative to --runs-root (default /mnt/e/QUANT_EVAL/runs).
+# Each line may name the run folder or its publication/ subfolder.
+# Lines starting with # are ignored.
+#
+# Six publishable runs: four models, six model-precision pairs,
+# three quantization schemes on Mistral-Nemo (the precision curve)
+# and Q4_K_M across three Qwen2.5 scales (the scale ladder).
+
+# --- Mistral-Nemo-Instruct-2407 precision curve, identical F16 baseline ---
+Mistral_Nemo_Instruct_2407/Mistral_Nemo_Instruct_2407_20260814_030505   # F16 vs Q4_K_M
+Mistral_Nemo_Instruct_2407/Mistral_Nemo_Instruct_2407_20260815_113254   # F16 vs Q5_K_M
+Mistral_Nemo_Instruct_2407/Mistral_Nemo_Instruct_2407_20260816_084553   # F16 vs Q8_0
+
+# --- Qwen2.5 scale ladder, all F16 vs Q4_K_M ---
+Qwen2.5_7B_Instruct/Qwen2.5_7B_Instruct_20260814_234822                 # 7B,     local
+Qwen2.5_14B_Instruct_1M/Qwen2.5_14B_Instruct_1M_20260815_220633         # 14B-1M, Modal
+Qwen2.5_32B_Instruct/Qwen2.5_32B_Instruct_20260815_081051               # 32B,    Modal

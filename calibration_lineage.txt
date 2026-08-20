@@ -1,0 +1,44 @@
+# quant_eval — calibration lineage declaration
+#
+# Records which internal calibration runs informed each published run.
+# Calibration runs are NEVER published; only their identifiers are disclosed,
+# so the record is complete without releasing provisional numbers.
+#
+# Format:
+#   [PUBLISHED_RUN_ID]
+#   CALIBRATION_RUN_ID
+#   CALIBRATION_RUN_ID
+#
+# Passed to the builder with --lineage calibration_lineage.txt
+
+# 1. Mistral-Nemo-Instruct-2407 — GGUF F16 vs GGUF Q4_K_M — local — Apache-2.0
+[Mistral_Nemo_Instruct_2407_20260814_030505]
+Mistral_Nemo_Instruct_2407_20260801_045455
+Mistral_Nemo_Instruct_2407_20260806_010333
+Mistral_Nemo_Instruct_2407_20260806_031656
+Mistral_Nemo_Instruct_2407_20260806_040832
+Mistral_Nemo_Instruct_2407_20260806_075304
+
+# 2. Mistral-Nemo-Instruct-2407 — GGUF F16 vs GGUF Q5_K_M — local — Apache-2.0
+[Mistral_Nemo_Instruct_2407_20260815_113254]
+Mistral_Nemo_Instruct_2407_20260816_002017
+
+# 3. Mistral-Nemo-Instruct-2407 — GGUF F16 vs GGUF Q8_0 — local — Apache-2.0
+[Mistral_Nemo_Instruct_2407_20260816_084553]
+Mistral_Nemo_Instruct_2407_20260816_080505
+
+# 4. Qwen2.5-7B-Instruct — GGUF F16 vs GGUF Q4_K_M — local — Apache-2.0
+[Qwen2.5_7B_Instruct_20260814_234822]
+Qwen2.5_7B_Instruct_20260809_160647
+Qwen2.5_7B_Instruct_20260809_163943
+Qwen2.5_7B_Instruct_20260809_165049
+
+# 5. Qwen2.5-14B-Instruct-1M — GGUF F16 vs GGUF Q4_K_M — Modal — Apache-2.0
+[Qwen2.5_14B_Instruct_1M_20260815_220633]
+Qwen2.5_14B_Instruct_1M_20260808_233748
+Qwen2.5_14B_Instruct_1M_20260809_003830
+
+# 6. Qwen2.5-32B-Instruct — GGUF F16 vs GGUF Q4_K_M — Modal — Apache-2.0
+[Qwen2.5_32B_Instruct_20260815_081051]
+Qwen2.5_32B_Instruct_20260810_011511
+Qwen2.5_32B_Instruct_20260810_030336
