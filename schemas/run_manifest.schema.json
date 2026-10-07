@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pbhappliedsystems/quant_eval_public_corpus_tools/schemas/run_manifest.schema.json",
+  "title": "quant_eval publication bundle: run_manifest.json",
+  "description": "Run manifest shipped in each quant_eval publication bundle. Derived from published example publication bundles (harness version_tag v7.22.22). `required` lists the fields present in every example. Fields not listed are permitted (additional properties are allowed); this schema specifies the fields consumed by the public corpus tooling (build_datasets.py, make_figures.py) and does not describe harness internals. Copyright 2026 PBH Applied Systems, LLC. Apache-2.0.",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique evaluation run identifier (D4 `run_id`)."
+    },
+    "model_id": {
+      "type": "string",
+      "description": "Model identifier; fallback for D4 `model_id`."
+    },
+    "adapter_id": {
+      "type": "string",
+      "description": "D4 `adapter_id`."
+    },
+    "adapter_reason": {
+      "type": "string",
+      "description": "D4 `adapter_reason`."
+    },
+    "version_tag": {
+      "type": "string",
+      "description": "D4 `version_tag`."
+    },
+    "evaluation_contract_id": {
+      "type": "string",
+      "description": "D4 `evaluation_contract_id`; also D3 crosswalk `evaluation_contract_id`."
+    },
+    "evaluation_contract": {
+      "type": "object",
+      "description": "Contract identifiers.",
+      "properties": {
+        "scoring_contract": {
+          "type": "string",
+          "description": "D4 `scoring_contract`."
+        },
+        "prompt_contract": {
+          "type": "string",
+          "description": "D4 `prompt_contract`."
+        },
+        "fixture_construction_contract": {
+          "type": "string",
+          "description": "D4 `fixture_construction_contract`."
+        }
+      },
+      "required": [
+        "scoring_contract",
+        "prompt_contract",
+        "fixture_construction_contract"
+      ]
+    },
+    "fixture_split": {
+      "type": "string",
+      "description": "D4 `fixture_split`; D3 crosswalk `fixture_split`."
+    },
+    "fixtures_sha256": {
+      "type": "string",
+      "description": "SHA-256 of the fixture file the run read."
+    },
+    "profile": {
+      "type": "string",
+      "description": "D4 `profile`."
+    },
+    "run_purpose": {
+      "type": "string",
+      "description": "D4 `run_purpose`."
+    },
+    "promotion_status": {
+      "type": "string",
+      "description": "D4 `promotion_status`."
+    },
+    "publication_status": {
+      "type": "string",
+      "description": "D4 `publication_status`."
+    },
+    "release_validation": {
+      "type": "object",
+      "description": "Completed-run validation result.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "D4 `release_validation_status`."
+        },
+        "rows": {
+          "type": "integer",
+          "description": "D4 `rows`: per-case rows in the run."
+        }
+      },
+      "required": [
+        "status",
+        "rows"
+      ]
+    },
+    "publication_decision": {
+      "type": "object",
+      "description": "Publication decision.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Decision status."
+        },
+        "blockers": {
+          "type": "array",
+          "description": "Blocking reasons; empty for a publishable run.",
+          "items": {
+            "description": "Observed empty in every example bundle."
+          }
+        }
+      },
+      "required": [
+        "status",
+        "blockers"
+      ]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "D4 `seed`."
+    },
+    "fixture_generation_seed": {
+      "type": "integer",
+      "description": "D4 `fixture_generation_seed`."
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "D4 `timestamp`."
+    },
+    "quant_types_requested": {
+      "type": "array",
+      "description": "Precisions requested for the run."
+    },
+    "decoding_conditions": {
+      "type": "object",
+      "description": "Decoding conditions; the source of the six decode columns appended to D1 and the decode_* fields of D4.",
+      "properties": {
+        "families": {
+          "type": "object",
+          "description": "Per-family decoding settings, keyed by task family.",
+          "additionalProperties": {
+            "type": "object",
+            "description": "One family.",
+            "properties": {
+              "temperature": {
+                "type": "number",
+                "description": "D1/D4 `decode_temperature`."
+              },
+              "stage1": {
+                "type": "object",
+                "description": "First-stage settings, where a family has stages.",
+                "properties": {
+                  "temperature": {
+                    "type": "number",
+                    "description": "D1/D4 `decode_temperature`."
+                  }
+                },
+                "required": [
+                  "temperature"
+                ]
+              }
+            }
+          },
+          "propertyNames": {
+            "enum": [
+              "json",
+              "json_multistep",
+              "mcq",
+              "mixed_brief_json",
+              "stateful_followup",
+              "toolcall",
+              "toolcall_only",
+              "fuzz"
+            ]
+          }
+        },
+        "runner_effective_conditions": {
+          "type": "object",
+          "description": "Effective decoding conditions per runner, keyed by runner name.",
+          "additionalProperties": {
+            "type": "object",
+            "description": "One runner.",
+            "properties": {
+              "seed": {
+                "type": "object",
+                "description": "D1/D4 `decode_seed_status` source.",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "D1/D4 `decode_seed_status`."
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "context_size": {
+                "type": "object",
+                "description": "D1/D4 `decode_context_size`. Observed as an object carrying `status` and `value`; build_datasets.py also accepts a bare scalar."
+              },
+              "top_p": {
+                "type": "object",
+                "description": "D1/D4 `decode_top_p`. Observed as an object carrying `status` and `value`; build_datasets.py also accepts a bare scalar."
+              },
+              "top_k": {
+                "type": "object",
+                "description": "D1/D4 `decode_top_k`. Observed as an object carrying `status` and `value`; build_datasets.py also accepts a bare scalar."
+              }
+            },
+            "required": [
+              "seed",
+              "context_size",
+              "top_p",
+              "top_k"
+            ]
+          }
+        }
+      },
+      "required": [
+        "families",
+        "runner_effective_conditions"
+      ]
+    },
+    "license_provenance": {
+      "type": "object",
+      "description": "Model identity and licence record; source of D4 licence and artifact fields.",
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "description": "D4/D5/D6/D7 `model_id`."
+        },
+        "canonical_upstream_model_id": {
+          "type": "string",
+          "description": "D4 `canonical_upstream_model_id`."
+        },
+        "license": {
+          "type": "string",
+          "description": "D4 `license`."
+        },
+        "spdx_license_id": {
+          "type": "string",
+          "description": "D4 `spdx_license_id`."
+        },
+        "commercial_use_status": {
+          "type": "string",
+          "description": "D4 `commercial_use_status`."
+        },
+        "artifact_identity": {
+          "type": "array",
+          "description": "Weight artifacts evaluated in the run.",
+          "items": {
+            "type": "object",
+            "description": "One weight artifact.",
+            "properties": {
+              "quant_type": {
+                "type": "string",
+                "description": "Artifact precision key; matched to `baseline_kind` / `quant_type` for D4."
+              },
+              "kind": {
+                "type": "string",
+                "description": "Artifact kind."
+              },
+              "sha256": {
+                "type": "string",
+                "description": "D4 `baseline_artifact_sha256` / `quantized_artifact_sha256`."
+              },
+              "bytes": {
+                "type": "integer",
+                "description": "D4 `baseline_artifact_bytes` / `quantized_artifact_bytes`."
+              },
+              "path": {
+                "type": "string",
+                "description": "Artifact location string. Never selected into any dataset by build_datasets.py."
+              }
+            },
+            "required": [
+              "quant_type",
+              "kind",
+              "sha256",
+              "bytes",
+              "path"
+            ]
+          }
+        },
+        "weight_lineage": {
+          "type": "object",
+          "description": "Upstream lineage of the weights.",
+          "properties": {
+            "upstream_revision": {
+              "type": "string",
+              "description": "D4 `upstream_revision`."
+            },
+            "upstream_revision_status": {
+              "type": "string",
+              "description": "D4 `upstream_revision_status`."
+            }
+          },
+          "required": [
+            "upstream_revision",
+            "upstream_revision_status"
+          ]
+        }
+      },
+      "required": [
+        "model_id",
+        "canonical_upstream_model_id",
+        "license",
+        "spdx_license_id",
+        "commercial_use_status",
+        "artifact_identity",
+        "weight_lineage"
+      ]
+    }
+  },
+  "required": [
+    "run_id",
+    "model_id",
+    "adapter_id",
+    "adapter_reason",
+    "version_tag",
+    "evaluation_contract_id",
+    "evaluation_contract",
+    "fixture_split",
+    "fixtures_sha256",
+    "profile",
+    "run_purpose",
+    "promotion_status",
+    "publication_status",
+    "release_validation",
+    "publication_decision",
+    "seed",
+    "fixture_generation_seed",
+    "timestamp",
+    "quant_types_requested",
+    "decoding_conditions",
+    "license_provenance"
+  ]
+}

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-eval-corpus-tools"
+version = "0.1.0"
+description = "Reader and recomputation CLI for the quant_eval public corpus (D0-D7)"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [{name = "Patrick Hill"}]
+maintainers = [{name = "PBH Applied Systems, LLC"}]
+requires-python = ">=3.9"
+dependencies = []
+keywords = ["quantization", "llm", "evaluation", "mcnemar", "dataset"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+pandas = ["pandas"]
+
+[project.scripts]
+qe-corpus = "qe_corpus.cli:main"
+
+[project.urls]
+Repository = "https://github.com/pbhappliedsystems/quant_eval_public_corpus_tools"
+Corpus = "https://doi.org/10.5281/zenodo.22009419"
+
+[tool.setuptools]
+packages = ["qe_corpus"]

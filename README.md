@@ -91,6 +91,45 @@ recomputable in full from D1 using the gate definitions published in
 `data_dictionary.json`. D2, D4, and D7 are harness-recorded and traceable
 through the source-bundle digests rather than recomputable.
 
+## Reading and recomputing the corpus: `qe-corpus`
+
+`qe_corpus/` is a small reader and command-line tool for the *published* datasets.
+It needs only the standard library (pandas optional) and contains no part of the
+evaluation harness.
+
+```bash
+pip install .                                  # from a clone; installs `qe-corpus`
+export QE_CORPUS_DATA=~/quant_eval_corpus      # folder holding the downloaded D0-D7
+
+qe-corpus summary                              # runs, models, families, case counts
+qe-corpus paired --run Mistral_Nemo_Instruct_2407_20260814_030505 --check
+                                               # D5 cells recomputed from D1, compared with D5
+qe-corpus significance                         # Whitepaper 2 Tables 5/6: degraded / improved / n.s.
+qe-corpus verify                               # digests: build_manifest.json, fixture file, bundles
+qe-corpus figure-inputs --out build/figure_inputs
+                                               # inputs for make_figures.py rebuilt from D5 + D7
+```
+
+`paired` applies each family's gate conjunction (D6 `gating_signals`) to the D1 rows,
+pairs the two lanes on `case_id`, and reports both pass rates, the delta, the
+discordant counts b and c, and the exact two-sided McNemar p-value from the binomial.
+
+Tests: `python -m unittest discover -s tests -v`. With `QE_CORPUS_DATA` set, they also
+recompute all 48 D5 cells and 96 D6 pass counts from D1 and check Whitepaper 2's
+Table 6 counts; without it those tests are skipped.
+
+## Documentation and schemas
+
+| File | Contents |
+|---|---|
+| [`docs/reproduce.md`](docs/reproduce.md) | Download, install, verify, recompute every recomputable table and the four figures, and what cannot be reproduced without the private harness. |
+| [`docs/fixture_format.md`](docs/fixture_format.md) | Specification of `golden_oracle_fixtures.json` (D3): layout, every field per family, expected outputs, versioning crosswalk, checksums. |
+| [`schemas/rollup.schema.json`](schemas/rollup.schema.json) | JSON Schema (draft 2020-12) for a publication bundle's `rollup.json`, covering the fields the public tooling reads. |
+| [`schemas/run_manifest.schema.json`](schemas/run_manifest.schema.json) | JSON Schema for `run_manifest.json`, covering the fields the public tooling reads. |
+| [`schemas/checksums.schema.json`](schemas/checksums.schema.json) | JSON Schema for a bundle's `checksums.json` (also the per-run objects in `source_bundle_checksums.json`). |
+| [`qe_corpus/`](qe_corpus), [`pyproject.toml`](pyproject.toml) | The reader package and the `qe-corpus` command. |
+| [`tests/`](tests) | Unit tests and checks against a downloaded corpus. |
+
 ## Licence
 
 Code is licensed under **Apache-2.0** — see `LICENSE`.

@@ -1,0 +1,625 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pbhappliedsystems/quant_eval_public_corpus_tools/schemas/rollup.schema.json",
+  "title": "quant_eval publication bundle: rollup.json",
+  "description": "Run-level statistical rollup shipped in each quant_eval publication bundle. Derived from published example publication bundles (harness version_tag v7.22.22). `required` lists the fields present in every example. Fields not listed are permitted (additional properties are allowed); this schema specifies the fields consumed by the public corpus tooling (build_datasets.py, make_figures.py) and does not describe harness internals. Copyright 2026 PBH Applied Systems, LLC. Apache-2.0.",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique evaluation run identifier. Same value as `run_id` in D1-D7."
+    },
+    "version_tag": {
+      "type": "string",
+      "description": "Application version tag of the run (D4 `version_tag`). Not a pooling key on its own."
+    },
+    "evaluation_contract_id": {
+      "type": "string",
+      "description": "Evaluation contract identifier and dataset split (D4 `evaluation_contract_id`)."
+    },
+    "fixtures_sha256": {
+      "type": "string",
+      "description": "SHA-256 of the fixture file the run read; the primary comparability key (D4 `fixtures_sha256`, D3 crosswalk `fixtures_sha256`)."
+    },
+    "comparability": {
+      "type": "object",
+      "description": "Pooling rule declared by the run.",
+      "properties": {
+        "primary_key": {
+          "type": "string",
+          "description": "Name of the field used as the primary comparability key."
+        },
+        "direct_pooling_requires": {
+          "type": "array",
+          "description": "Fields that must match for two runs to be pooled directly.",
+          "items": {
+            "type": "string",
+            "description": "Field name."
+          }
+        },
+        "version_tag_is_comparability_key": {
+          "type": "boolean",
+          "description": "Whether version_tag alone is a pooling key."
+        }
+      },
+      "required": [
+        "primary_key",
+        "direct_pooling_requires",
+        "version_tag_is_comparability_key"
+      ]
+    },
+    "fixture_coverage": {
+      "type": "object",
+      "description": "Fixture case counts covered by the run.",
+      "properties": {
+        "case_counts": {
+          "type": "object",
+          "description": "Cases per fixture family key (`<family>_cases`, see docs/fixture_format.md).",
+          "additionalProperties": {
+            "type": "integer",
+            "description": "Number of cases."
+          }
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "Whether every planned case was evaluated."
+        },
+        "manifest_planned_cases_per_runner": {
+          "type": "integer",
+          "description": "Cases planned per runner."
+        },
+        "total_fixture_records": {
+          "type": "integer",
+          "description": "Total fixture records."
+        },
+        "total_unique_case_ids": {
+          "type": "integer",
+          "description": "Distinct case identifiers."
+        },
+        "total_semantically_unique_cases": {
+          "type": "integer",
+          "description": "Cases remaining after semantic de-duplication."
+        }
+      },
+      "required": [
+        "case_counts",
+        "complete",
+        "manifest_planned_cases_per_runner",
+        "total_fixture_records",
+        "total_unique_case_ids",
+        "total_semantically_unique_cases"
+      ]
+    },
+    "by_runner_family": {
+      "type": "object",
+      "description": "Per-runner, per-family pass statistics; the source of D6. Keyed by runner name, then by task family.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "One runner (lane). Keys are task family names.",
+        "additionalProperties": {
+          "type": "object",
+          "description": "One family on one runner. Source of one D6 row.",
+          "properties": {
+            "role": {
+              "type": "string",
+              "description": "D6 `role`."
+            },
+            "n": {
+              "type": "integer",
+              "description": "D6 `n`: cases evaluated."
+            },
+            "pass_n": {
+              "type": "integer",
+              "description": "D6 `pass_n`."
+            },
+            "pass_count": {
+              "type": "integer",
+              "description": "D6 `pass_count`: cases where every gating signal holds."
+            },
+            "pass_rate": {
+              "type": "number",
+              "description": "D6 `pass_rate`. Recomputable from D1 using the gate in D6 `gating_signals`."
+            },
+            "pass_rate_ci": {
+              "type": "object",
+              "description": "D6 `pass_rate_ci_*`: Wilson score interval on the pass rate.",
+              "properties": {
+                "low": {
+                  "type": "number",
+                  "description": "Lower bound of the interval."
+                },
+                "high": {
+                  "type": "number",
+                  "description": "Upper bound of the interval."
+                },
+                "level": {
+                  "type": "number",
+                  "description": "Confidence level, e.g. 0.95."
+                },
+                "method": {
+                  "type": "string",
+                  "description": "Interval method identifier."
+                }
+              },
+              "required": [
+                "low",
+                "high",
+                "level",
+                "method"
+              ]
+            },
+            "metric_status": {
+              "type": "string",
+              "description": "D6 `metric_status`."
+            }
+          },
+          "required": [
+            "role",
+            "n",
+            "pass_n",
+            "pass_count",
+            "pass_rate",
+            "pass_rate_ci",
+            "metric_status"
+          ]
+        },
+        "propertyNames": {
+          "enum": [
+            "json",
+            "json_multistep",
+            "mcq",
+            "mixed_brief_json",
+            "stateful_followup",
+            "toolcall",
+            "toolcall_only",
+            "fuzz"
+          ]
+        }
+      }
+    },
+    "paired_runner_comparison": {
+      "type": "object",
+      "description": "Paired full-weight vs quantized comparison per family; the source of D5. Keyed by task family.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "One family. Source of one D5 row.",
+        "properties": {
+          "runner_a": {
+            "type": "string",
+            "description": "D5 `runner_a`: the full-weight (baseline) lane."
+          },
+          "runner_b": {
+            "type": "string",
+            "description": "D5 `runner_b`: the quantized lane."
+          },
+          "paired_n": {
+            "type": "integer",
+            "description": "D5 `paired_n`: cases present in both lanes."
+          },
+          "both_pass": {
+            "type": "integer",
+            "description": "D5 `both_pass`."
+          },
+          "both_fail": {
+            "type": "integer",
+            "description": "D5 `both_fail`."
+          },
+          "runner_a_only_pass": {
+            "type": "integer",
+            "description": "D5 `runner_a_only_pass`: discordant count b."
+          },
+          "runner_b_only_pass": {
+            "type": "integer",
+            "description": "D5 `runner_b_only_pass`: discordant count c."
+          },
+          "disagreements": {
+            "type": "integer",
+            "description": "D5 `disagreements` (b + c)."
+          },
+          "disagreement_rate": {
+            "type": "number",
+            "description": "D5 `disagreement_rate` ((b + c) / paired_n)."
+          },
+          "pass_rate_delta_runner_b_minus_runner_a": {
+            "type": "number",
+            "description": "D5 `pass_rate_delta_runner_b_minus_runner_a`: quantized minus full-weight pass rate."
+          },
+          "pass_rate_delta_ci": {
+            "type": "object",
+            "description": "D5 `delta_ci_*`.",
+            "properties": {
+              "low": {
+                "type": "number",
+                "description": "Lower bound of the interval."
+              },
+              "high": {
+                "type": "number",
+                "description": "Upper bound of the interval."
+              },
+              "level": {
+                "type": "number",
+                "description": "Confidence level, e.g. 0.95."
+              },
+              "method": {
+                "type": "string",
+                "description": "Interval method identifier."
+              }
+            },
+            "required": [
+              "low",
+              "high",
+              "level",
+              "method"
+            ]
+          },
+          "mcnemar_exact": {
+            "type": "object",
+            "description": "D5 `mcnemar_*`: exact McNemar test on the discordant pairs.",
+            "properties": {
+              "p_value": {
+                "type": "number",
+                "description": "D5 `mcnemar_p_value`."
+              },
+              "discordant_pairs": {
+                "type": "integer",
+                "description": "D5 `mcnemar_discordant_pairs`."
+              },
+              "alternative": {
+                "type": "string",
+                "description": "D5 `mcnemar_alternative`."
+              }
+            },
+            "required": [
+              "p_value",
+              "discordant_pairs",
+              "alternative"
+            ]
+          },
+          "discriminating": {
+            "type": "boolean",
+            "description": "D5 `discriminating`."
+          },
+          "cluster_adjusted": {
+            "type": "object",
+            "description": "D5 `cluster_adjusted_*`.",
+            "properties": {
+              "method": {
+                "type": "string",
+                "description": "D5 `cluster_adjusted_method`."
+              },
+              "effective_paired_n": {
+                "type": "integer",
+                "description": "D5 `cluster_adjusted_effective_paired_n`."
+              },
+              "delta_runner_b_minus_runner_a": {
+                "type": "number",
+                "description": "D5 `cluster_adjusted_delta`."
+              },
+              "delta_ci": {
+                "type": "object",
+                "description": "D5 `cluster_adjusted_delta_ci_low` / `_high`.",
+                "properties": {
+                  "low": {
+                    "type": "number",
+                    "description": "Lower bound of the interval."
+                  },
+                  "high": {
+                    "type": "number",
+                    "description": "Upper bound of the interval."
+                  }
+                },
+                "required": [
+                  "low",
+                  "high"
+                ]
+              }
+            },
+            "required": [
+              "method",
+              "effective_paired_n",
+              "delta_runner_b_minus_runner_a",
+              "delta_ci"
+            ]
+          }
+        },
+        "required": [
+          "runner_a",
+          "runner_b",
+          "paired_n",
+          "both_pass",
+          "both_fail",
+          "runner_a_only_pass",
+          "runner_b_only_pass",
+          "disagreements",
+          "disagreement_rate",
+          "pass_rate_delta_runner_b_minus_runner_a",
+          "pass_rate_delta_ci",
+          "mcnemar_exact",
+          "discriminating",
+          "cluster_adjusted"
+        ]
+      },
+      "propertyNames": {
+        "enum": [
+          "json",
+          "json_multistep",
+          "mcq",
+          "mixed_brief_json",
+          "stateful_followup",
+          "toolcall",
+          "toolcall_only",
+          "fuzz"
+        ]
+      }
+    },
+    "efficiency": {
+      "type": "object",
+      "description": "Footprint and runtime comparison; the source of D7.",
+      "properties": {
+        "artifact_footprint": {
+          "type": "array",
+          "description": "Stored weight-artifact sizes. build_datasets.py reads element 0.",
+          "items": {
+            "type": "object",
+            "description": "One baseline/quantized artifact pair.",
+            "properties": {
+              "baseline_kind": {
+                "type": "string",
+                "description": "D7 `baseline_kind`."
+              },
+              "quant_type": {
+                "type": "string",
+                "description": "D7 `quant_type`."
+              },
+              "baseline_bytes": {
+                "type": "integer",
+                "description": "D7 `baseline_bytes`."
+              },
+              "quantized_bytes": {
+                "type": "integer",
+                "description": "D7 `quantized_bytes`."
+              },
+              "compression_ratio": {
+                "type": "number",
+                "description": "D7 `compression_ratio`."
+              },
+              "size_reduction_fraction": {
+                "type": "number",
+                "description": "D7 `size_reduction_fraction`."
+              },
+              "measurement_scope": {
+                "type": "string",
+                "description": "D7 `measurement_scope`."
+              },
+              "excludes": {
+                "type": "array",
+                "description": "D7 `excludes` (published joined with ';').",
+                "items": {
+                  "type": "string",
+                  "description": "Excluded component."
+                }
+              }
+            },
+            "required": [
+              "baseline_kind",
+              "quant_type",
+              "baseline_bytes",
+              "quantized_bytes",
+              "compression_ratio",
+              "size_reduction_fraction",
+              "measurement_scope",
+              "excludes"
+            ]
+          }
+        },
+        "artifact_footprint_status": {
+          "type": "string",
+          "description": "D7 `artifact_footprint_status`."
+        },
+        "runtime_comparison": {
+          "type": "object",
+          "description": "Observed runtime comparison between lanes.",
+          "properties": {
+            "baseline_runner": {
+              "type": "string",
+              "description": "D7 `baseline_runner`."
+            },
+            "quantized_runner": {
+              "type": "string",
+              "description": "D7 `quantized_runner`."
+            },
+            "baseline_tokens_per_second": {
+              "type": "number",
+              "description": "D7 `baseline_tokens_per_second`."
+            },
+            "quantized_tokens_per_second": {
+              "type": "number",
+              "description": "D7 `quantized_tokens_per_second`."
+            },
+            "throughput_ratio_quantized_over_baseline": {
+              "type": "number",
+              "description": "D7 `throughput_ratio`."
+            },
+            "headline_runtime_metric": {
+              "type": "object",
+              "description": "D7 `observed_wall_time_ratio` and `wall_time_direction`.",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "description": "D7 `observed_wall_time_ratio` (full-weight wall time / quantized wall time)."
+                },
+                "direction": {
+                  "type": "string",
+                  "description": "D7 `wall_time_direction`."
+                }
+              },
+              "required": [
+                "value",
+                "direction"
+              ]
+            },
+            "token_volume_cost_proxy": {
+              "type": "object",
+              "description": "D7 `token_volume_cost_proxy_ratio` source."
+            },
+            "monetary_cost_ratio": {
+              "type": "object",
+              "description": "D7 `monetary_cost_ratio_status` source.",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "description": "D7 `monetary_cost_ratio_status`."
+                }
+              },
+              "required": [
+                "status"
+              ]
+            }
+          },
+          "required": [
+            "baseline_runner",
+            "quantized_runner",
+            "baseline_tokens_per_second",
+            "quantized_tokens_per_second",
+            "throughput_ratio_quantized_over_baseline",
+            "headline_runtime_metric",
+            "token_volume_cost_proxy",
+            "monetary_cost_ratio"
+          ]
+        }
+      },
+      "required": [
+        "artifact_footprint",
+        "artifact_footprint_status",
+        "runtime_comparison"
+      ]
+    },
+    "license_provenance": {
+      "type": "object",
+      "description": "Model identity and licence record (shared shape with run_manifest.json).",
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "description": "D4/D5/D6/D7 `model_id`."
+        },
+        "canonical_upstream_model_id": {
+          "type": "string",
+          "description": "D4 `canonical_upstream_model_id`."
+        },
+        "license": {
+          "type": "string",
+          "description": "D4 `license`."
+        },
+        "spdx_license_id": {
+          "type": "string",
+          "description": "D4 `spdx_license_id`."
+        },
+        "commercial_use_status": {
+          "type": "string",
+          "description": "D4 `commercial_use_status`."
+        },
+        "artifact_identity": {
+          "type": "array",
+          "description": "Weight artifacts evaluated in the run.",
+          "items": {
+            "type": "object",
+            "description": "One weight artifact.",
+            "properties": {
+              "quant_type": {
+                "type": "string",
+                "description": "Artifact precision key; matched to `baseline_kind` / `quant_type` for D4."
+              },
+              "kind": {
+                "type": "string",
+                "description": "Artifact kind."
+              },
+              "sha256": {
+                "type": "string",
+                "description": "D4 `baseline_artifact_sha256` / `quantized_artifact_sha256`."
+              },
+              "bytes": {
+                "type": "integer",
+                "description": "D4 `baseline_artifact_bytes` / `quantized_artifact_bytes`."
+              },
+              "path": {
+                "type": "string",
+                "description": "Artifact location string. Never selected into any dataset by build_datasets.py."
+              }
+            },
+            "required": [
+              "quant_type",
+              "kind",
+              "sha256",
+              "bytes",
+              "path"
+            ]
+          }
+        },
+        "weight_lineage": {
+          "type": "object",
+          "description": "Upstream lineage of the weights.",
+          "properties": {
+            "upstream_revision": {
+              "type": "string",
+              "description": "D4 `upstream_revision`."
+            },
+            "upstream_revision_status": {
+              "type": "string",
+              "description": "D4 `upstream_revision_status`."
+            }
+          },
+          "required": [
+            "upstream_revision",
+            "upstream_revision_status"
+          ]
+        }
+      },
+      "required": [
+        "model_id",
+        "canonical_upstream_model_id",
+        "license",
+        "spdx_license_id",
+        "commercial_use_status",
+        "artifact_identity",
+        "weight_lineage"
+      ]
+    },
+    "evidence_adjudication": {
+      "type": "object",
+      "description": "Present in the published bundle but not read by the public corpus tooling. Its internal structure is intentionally not specified by this schema."
+    },
+    "fixture_semantic_uniqueness": {
+      "type": "object",
+      "description": "Present in the published bundle but not read by the public corpus tooling. Its internal structure is intentionally not specified by this schema."
+    },
+    "generated_from": {
+      "type": "object",
+      "description": "Present in the published bundle but not read by the public corpus tooling. Its internal structure is intentionally not specified by this schema."
+    },
+    "json_multistep_generation": {
+      "type": "object",
+      "description": "Present in the published bundle but not read by the public corpus tooling. Its internal structure is intentionally not specified by this schema."
+    },
+    "statistical_methods": {
+      "type": "object",
+      "description": "Present in the published bundle but not read by the public corpus tooling. Its internal structure is intentionally not specified by this schema."
+    }
+  },
+  "required": [
+    "run_id",
+    "version_tag",
+    "evaluation_contract_id",
+    "fixtures_sha256",
+    "comparability",
+    "fixture_coverage",
+    "by_runner_family",
+    "paired_runner_comparison",
+    "efficiency",
+    "license_provenance",
+    "evidence_adjudication",
+    "fixture_semantic_uniqueness",
+    "generated_from",
+    "json_multistep_generation",
+    "statistical_methods"
+  ]
+}

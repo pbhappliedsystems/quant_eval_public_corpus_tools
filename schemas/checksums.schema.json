@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pbhappliedsystems/quant_eval_public_corpus_tools/schemas/checksums.schema.json",
+  "title": "quant_eval publication bundle: checksums.json",
+  "description": "Per-file SHA-256 digests shipped in each quant_eval publication bundle (schema_version 1). Derived from published example publication bundles. `required` lists the fields present in every example. Every file listed under `files` must hash to `digest` and have length `bytes`; build_datasets.py aborts on any mismatch. The same objects are republished verbatim, keyed by run_id, under `bundles` in each dataset's source_bundle_checksums.json. build_datasets.py also accepts older flat shapes ({name: hex} or {name: {sha256|digest, bytes|size}}); those are not described here. Copyright 2026 PBH Applied Systems, LLC. Apache-2.0.",
+  "type": "object",
+  "properties": {
+    "algorithm": {
+      "type": "string",
+      "const": "sha256",
+      "description": "Digest algorithm. Always sha256 in the published bundles."
+    },
+    "schema_version": {
+      "type": "integer",
+      "description": "Version of this checksum file layout. Observed value 1."
+    },
+    "files": {
+      "type": "object",
+      "description": "Map from a file name inside the publication bundle to its digest record. Keys are bare file names relative to the bundle directory.",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[^/\\\\]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/fileEntry"
+      },
+      "minProperties": 1
+    }
+  },
+  "required": [
+    "algorithm",
+    "files",
+    "schema_version"
+  ],
+  "$defs": {
+    "fileEntry": {
+      "type": "object",
+      "description": "Digest record for one file.",
+      "properties": {
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lower-case hexadecimal SHA-256 of the file's bytes."
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File length in bytes."
+        }
+      },
+      "required": [
+        "bytes",
+        "digest"
+      ]
+    }
+  }
+}
