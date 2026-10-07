@@ -2,26 +2,112 @@
 """Generate the four quant_eval corpus figures from rollup.json values only.
 
 No value is recomputed, smoothed, or derived. Every plotted number is read
-directly from the six publication bundles' rollup.json files.
+directly from the six publication bundles' rollup.json files. Figure 4 also
+reads the accelerator on each lane from the hardware map, the same declaration
+build_datasets.py requires for D7 (v1.0.1 onward).
+
+    python3 make_figures.py --bundles-file corpus_runs.txt \
+                            --hardware-map hardware_map.txt \
+                            --runs-root /mnt/e/QUANT_EVAL/runs --out figures
+
+Each figure is written as SVG (whitepaper, this repo) and 200-dpi PNG (dataset
+cards). Regenerate, never hand-edit.
 """
+import argparse
 import json
 import os
+import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
-OUT = "/mnt/user-data/outputs/figures"
+# The six corpus runs and the short key each figure uses for them.
+KEY = {
+    "Mistral_Nemo_Instruct_2407_20260814_030505": "Q4_K_M",
+    "Mistral_Nemo_Instruct_2407_20260815_113254": "Q5_K_M",
+    "Mistral_Nemo_Instruct_2407_20260816_084553": "Q8_0",
+    "Qwen2.5_7B_Instruct_20260814_234822": "7B",
+    "Qwen2.5_14B_Instruct_1M_20260815_220633": "14B-1M",
+    "Qwen2.5_32B_Instruct_20260815_081051": "32B",
+}
+# Display names for the accelerator tokens used in hardware_map.txt and D7.
+ACCEL = {
+    "nvidia_geforce_rtx_4090": "RTX 4090",
+    "nvidia_a100_40gb": "A100-40GB",
+    "nvidia_a100_80gb": "A100-80GB",
+    "nvidia_a10g": "A10G",
+    "nvidia_t4": "T4",
+    "nvidia_l4": "L4",
+    "nvidia_h100": "H100",
+}
+
+
+def die(msg):
+    sys.exit("make_figures.py: " + msg)
+
+
+def read_list(path):
+    out = []
+    with open(path, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.split("#", 1)[0].strip()
+            if line:
+                out.append(line)
+    return out
+
+
+def rollup_path(entry, runs_root):
+    p = entry if os.path.isabs(entry) else os.path.join(runs_root, entry)
+    if os.path.basename(os.path.normpath(p)) != "publication":
+        p = os.path.join(p, "publication")
+    return os.path.join(p, "rollup.json")
+
+
+def read_hardware_map(path):
+    """RUN_ID BASELINE_ACCELERATOR QUANTIZED_ACCELERATOR, one run per line
+    (build_datasets.py format). hardware_matched_pair is computed from the two
+    tokens, never declared."""
+    hw = {}
+    for n, line in enumerate(read_list(path), 1):
+        parts = line.split()
+        if len(parts) != 3:
+            die(f"{path}: line {n}: expected 3 fields, got {len(parts)}")
+        hw[parts[0]] = (parts[1], parts[2])
+    return hw
+
+
+ap = argparse.ArgumentParser(description=__doc__,
+                             formatter_class=argparse.RawDescriptionHelpFormatter)
+ap.add_argument("--bundles-file", default="corpus_runs.txt")
+ap.add_argument("--hardware-map", default="hardware_map.txt")
+ap.add_argument("--runs-root", default="/mnt/e/QUANT_EVAL/runs")
+ap.add_argument("--out", default="figures")
+args = ap.parse_args()
+
+OUT = args.out
 os.makedirs(OUT, exist_ok=True)
 
-BUNDLES = {
-    "Q4_K_M": "pub/publication/publication/rollup.json",
-    "Q5_K_M": "pub/publication/publication_1/rollup.json",
-    "Q8_0":   "pub6/rollup.json",
-    "7B":     "pub/publication/publication_2/rollup.json",
-    "14B-1M": "pub/publication/publication_3/rollup.json",
-    "32B":    "pub/publication/publication_4/rollup.json",
-}
+BUNDLES = {}
+for entry in read_list(args.bundles_file):
+    rid = os.path.basename(os.path.normpath(entry))
+    if rid == "publication":
+        rid = os.path.basename(os.path.dirname(os.path.normpath(entry)))
+    if rid not in KEY:
+        die(f"run {rid} is not one of the six corpus runs this script plots")
+    BUNDLES[KEY[rid]] = (rid, rollup_path(entry, args.runs_root))
+if set(BUNDLES) != set(KEY.values()):
+    die("expected the six corpus runs, got: " + ", ".join(sorted(BUNDLES)))
+HW = read_hardware_map(args.hardware_map)
+missing = [rid for rid, _ in BUNDLES.values() if rid not in HW]
+if missing:
+    die("hardware map has no line for: " + ", ".join(missing))
+for rid, _ in BUNDLES.values():
+    for tok in HW[rid]:
+        if tok not in ACCEL:
+            die(f"unknown accelerator token {tok!r} for {rid}; add it to ACCEL")
+
 FAM = ["json", "json_multistep", "mcq", "mixed_brief_json",
        "stateful_followup", "toolcall", "toolcall_only", "fuzz"]
 LABEL = {"json": "json", "json_multistep": "json_multistep", "mcq": "mcq",
@@ -50,8 +136,10 @@ plt.rcParams.update({
 })
 
 D = {}
-for k, p in BUNDLES.items():
-    o = json.load(open(p))
+for k, (rid, p) in BUNDLES.items():
+    if not os.path.isfile(p):
+        die(f"missing {p}")
+    o = json.load(open(p, encoding="utf-8"))
     d = {}
     for f in FAM:
         P = o["paired_runner_comparison"][f]
@@ -67,7 +155,14 @@ for k, p in BUNDLES.items():
                       red=af["size_reduction_fraction"])
     d["_rt"] = dict(v=rc["headline_runtime_metric"]["value"],
                     dirn=rc["headline_runtime_metric"].get("direction"))
+    base_acc, quant_acc = HW[rid]
+    d["_hw"] = dict(base=ACCEL[base_acc], quant=ACCEL[quant_acc],
+                    matched=(base_acc == quant_acc))
     D[k] = d
+
+
+def nsig(k):
+    return sum(1 for f in FAM if D[k][f]["p"] < 0.05)
 
 
 def save(fig, name):
@@ -134,7 +229,8 @@ forest(
     "fig1_precision_curve_mistral_nemo",
     "Quantization",
     "Solid markers: two-sided exact McNemar p < 0.05. Families significant: "
-    "Q4_K_M 6 of 8; Q5_K_M 0 of 8; Q8_0 0 of 8.\n"
+    f"Q4_K_M {nsig('Q4_K_M')} of 8; Q5_K_M {nsig('Q5_K_M')} of 8; "
+    f"Q8_0 {nsig('Q8_0')} of 8.\n"
     "Intervals are 95% confidence intervals on the paired difference. "
     "Source: quant_eval v7.22.22, rollup.json paired_runner_comparison.",
 )
@@ -164,14 +260,16 @@ ax1.set_xlim(42, 78)
 ax1.set_yticks(range(0, 8))
 ax1.grid(color=GRID, lw=0.7, zorder=1)
 ax1.set_axisbelow(True)
-ax1.annotate("two-thirds of the saving,\nnone of the damage",
+share = 100 * D["Q5_K_M"]["_foot"]["red"] / D["Q4_K_M"]["_foot"]["red"]
+ax1.annotate(f"{share:.1f}% of Q4_K_M's saving,\nnone of the damage",
              xy=(64.0, 0.28), xytext=(52.0, 3.0), fontsize=9.5,
              color="#333333", ha="center",
              arrowprops=dict(arrowstyle="->", color="#666666", lw=1.1,
                              connectionstyle="arc3,rad=-0.28"))
 fig.suptitle("The entire behavioral cost is paid in one step",
              x=0.02, ha="left", fontsize=14, weight="bold", y=1.01)
-ax1.set_title("Mistral-Nemo-Instruct-2407 · F16 baseline = 24.50 GB",
+ax1.set_title("Mistral-Nemo-Instruct-2407 · F16 baseline = "
+              f"{D['Q4_K_M']['_foot']['base'] / 1e9:.2f} GB",
               loc="left", fontsize=10, color="#555555", pad=10)
 fig.text(0.02, -0.02,
          "Storage saved is size_reduction_fraction from rollup.json "
@@ -188,7 +286,7 @@ forest(
     "fig3_qwen_scale_ladder",
     "Qwen2.5 parameters",
     "Solid markers: two-sided exact McNemar p < 0.05. Families significant: "
-    "7B 4 of 8; 14B-1M 4 of 8; 32B 0 of 8.\n"
+    f"7B {nsig('7B')} of 8; 14B-1M {nsig('14B-1M')} of 8; 32B {nsig('32B')} of 8.\n"
     "CONFOUNDED: 7B ran on local llama.cpp with seed 42 applied; 14B-1M and "
     "32B ran on Modal, which records seed status 'unsupported'. Scale and "
     "substrate are not separated by this corpus.",
@@ -196,55 +294,65 @@ forest(
 )
 
 # ---------------------------------------------------------------- Figure 4
-fig, ax = plt.subplots(figsize=(8.6, 4.6))
-rows = [
-    ("Mistral-Nemo  Q4_K_M", "local", D["Q4_K_M"]["_rt"]["v"], "Q4_K_M"),
-    ("Mistral-Nemo  Q5_K_M", "local", D["Q5_K_M"]["_rt"]["v"], "Q5_K_M"),
-    ("Qwen2.5-7B  Q4_K_M", "local", D["7B"]["_rt"]["v"], "7B"),
-    ("Mistral-Nemo  Q8_0", "local", D["Q8_0"]["_rt"]["v"], "Q8_0"),
-    ("Qwen2.5-14B-1M  Q4_K_M", "Modal", D["14B-1M"]["_rt"]["v"], "14B-1M"),
-    ("Qwen2.5-32B  Q4_K_M", "Modal", D["32B"]["_rt"]["v"], "32B"),
-]
+# Observed wall-time ratio per pair, with the accelerator on each lane.
+# A pair whose lanes ran on different accelerators is drawn hatched and labelled
+# hardware-unmatched: its ratio measures the hardware difference, not quantization.
+fig, ax = plt.subplots(figsize=(9.2, 5.2))
+names = {"Q4_K_M": "Mistral-Nemo  Q4_K_M", "Q5_K_M": "Mistral-Nemo  Q5_K_M",
+         "Q8_0": "Mistral-Nemo  Q8_0", "7B": "Qwen2.5-7B  Q4_K_M",
+         "14B-1M": "Qwen2.5-14B-1M  Q4_K_M", "32B": "Qwen2.5-32B  Q4_K_M"}
+rows = sorted(names, key=lambda k: (not D[k]["_hw"]["matched"], -D[k]["_rt"]["v"]))
 ypos = list(range(len(rows)))[::-1]
-for y, (name, sub, v, key) in zip(ypos, rows):
-    slow = v < 1.0
-    ax.barh([y], [v], height=0.58, color=C[key],
-            alpha=0.35 if slow else 0.92, zorder=3,
-            edgecolor=C[key], linewidth=1.6,
-            hatch="///" if slow else None)
-    ax.text(v + 0.045, y, f"{v:.3f}×", va="center", fontsize=10,
+xmax = max(D[k]["_rt"]["v"] for k in rows)
+for y, k in zip(ypos, rows):
+    v, hw = D[k]["_rt"]["v"], D[k]["_hw"]
+    ax.barh([y], [v], height=0.58, color=C[k] if hw["matched"] else "white",
+            alpha=0.92 if hw["matched"] else 1.0, zorder=3,
+            edgecolor=C[k], linewidth=1.6,
+            hatch=None if hw["matched"] else "///")
+    note = "" if hw["matched"] else "   hardware-unmatched"
+    ax.text(max(v, 1.0) + 0.05, y, f"{v:.3f}×{note}", va="center", fontsize=10,
             weight="bold", color=INK)
 ax.axvline(1.0, color=INK, lw=1.5, zorder=4)
-ax.set_ylim(-0.95, 5.55)
 ax.text(1.02, -0.85, "parity", fontsize=9, color=INK, va="center", ha="left")
 ax.set_yticks(ypos)
-ax.set_yticklabels([f"{n}\n{s}" for n, s, _, _ in rows], fontsize=9)
-ax.set_xlabel("Observed evaluation wall-time ratio "
-              "(full weight ÷ quantized)", fontsize=10)
-ax.set_xlim(0, 3.05)
+ax.set_yticklabels([f"{names[k]}\n{D[k]['_hw']['base']} → {D[k]['_hw']['quant']}"
+                    for k in rows], fontsize=9)
+ax.set_ylim(-0.95, len(rows) - 0.45)
+ax.set_xlim(0, max(3.05, xmax + 0.9))
+ax.set_xlabel("Observed evaluation wall-time ratio (full weight ÷ quantized); "
+              "accelerator shown as full-weight lane → quantized lane", fontsize=9.5)
 ax.grid(axis="x", color=GRID, lw=0.7, zorder=1)
 ax.set_axisbelow(True)
-ax.annotate("slower under quantization", xy=(0.80, 0.45),
-            xytext=(1.62, 1.25), fontsize=9.5, color="#333333", va="center",
-            arrowprops=dict(arrowstyle="->", color="#666666", lw=1.1,
-                            connectionstyle="arc3,rad=0.28"))
-fig.suptitle("Quantization does not universally run faster",
+ax.legend(handles=[Patch(facecolor="#888888", edgecolor="#888888",
+                         label="same accelerator on both lanes"),
+                   Patch(facecolor="white", edgecolor="#888888", hatch="///",
+                         label="different accelerators: not a quantization effect")],
+          loc="lower right", frameon=True, framealpha=0.95, edgecolor=GRID,
+          fontsize=8.5)
+matched = [D[k]["_rt"]["v"] for k in rows if D[k]["_hw"]["matched"]]
+fig.suptitle("Quantized lanes ran faster on every hardware-matched pair",
              x=0.02, ha="left", fontsize=14, weight="bold", y=1.02)
-ax.set_title("Two of six measured pairs are slower than full weight",
+ax.set_title(f"{len(matched)} of {len(rows)} pairs ran both lanes on the same "
+             f"accelerator: {min(matched):.3f}× to {max(matched):.3f}×",
              loc="left", fontsize=10, color="#555555", pad=10)
-fig.text(0.02, -0.10,
-         "Observed harness wall time on the recorded hardware and backends. "
-         "Not a controlled throughput benchmark and not a general claim about "
-         "quantization performance\nat any precision on any hardware. "
-         "Source: rollup.json efficiency.runtime_comparison."
-         "headline_runtime_metric.",
+fig.text(0.02, -0.02,
+         "Observed harness wall time on the recorded hardware and backends. Not a "
+         "controlled throughput benchmark and not a general claim about quantization\n"
+         "performance at any precision on any hardware. Hatched pairs ran the "
+         "full-weight and quantized lanes on different accelerator classes; their\n"
+         "ratios reflect that difference. Source: rollup.json "
+         "efficiency.runtime_comparison.headline_runtime_metric; accelerators from "
+         "hardware_map.txt (D7 v1.0.1).",
          fontsize=8, color="#666666", ha="left", va="top")
 save(fig, "fig4_wall_time_ratio_six_pairs")
 
 # ---------------------------------------------------------------- audit
 print("\n--- PLOTTED VALUES (audit) ---")
 for k in BUNDLES:
-    print(k, "sig_families=%d" % sum(1 for f in FAM if D[k][f]["p"] < 0.05),
+    print(k, "sig_families=%d" % nsig(k),
+          "lanes=%s->%s" % (D[k]["_hw"]["base"], D[k]["_hw"]["quant"]),
+          "matched=%s" % D[k]["_hw"]["matched"],
           "wall_time=%.4f" % D[k]["_rt"]["v"],
           "size_reduction=%.4f" % D[k]["_foot"]["red"],
           "quant_GB=%.2f" % (D[k]["_foot"]["quant"] / 1e9))

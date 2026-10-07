@@ -30,8 +30,9 @@ has three links:
 | File | Purpose |
 |---|---|
 | `build_datasets.py` | Derives the seven datasets and the corpus record from publication bundles. Standard library only. |
-| `make_figures.py` | Generates the four corpus figures from harness rollups. No plotted value is recomputed, smoothed, or fitted. |
-| `figures/*.svg` | Vector figures for print and the whitepaper. PNG versions ship inside the datasets that reference them. |
+| `make_figures.py` | Generates the four corpus figures from harness rollups. No plotted value is recomputed, smoothed, or fitted. Figure 4 reads the accelerator on each lane from `hardware_map.txt`. |
+| `figures/` | The four figures, SVG (print and the whitepaper) and 200-dpi PNG (copied into the datasets that reference them by `--figures`). |
+| `hardware_map.txt` | The accelerator on each lane of each run, declared by the author. The bundles do not record accelerator class, so `build_datasets.py` requires this file for D7 and `make_figures.py` requires it for Figure 4. |
 | `corpus_runs.txt` | The explicit list of published runs. Selection is declared, never inferred. |
 | `calibration_lineage.txt` | Internal calibration runs recorded against the published run each informed. Calibration runs are not published; only their identifiers are disclosed. |
 | `reserved_dois.json` | Concept and version DOIs per dataset, embedded into the generated cards at build time. |
@@ -39,19 +40,38 @@ has three links:
 ## Usage
 
 ```bash
-python3 build_datasets.py --bundles-file corpus_runs.txt --dry-run
+python3 make_figures.py --bundles-file corpus_runs.txt \
+                        --hardware-map hardware_map.txt --out figures
+
+python3 build_datasets.py --bundles-file corpus_runs.txt \
+                          --hardware-map hardware_map.txt --dry-run
 
 python3 build_datasets.py --bundles-file corpus_runs.txt \
                           --lineage calibration_lineage.txt \
+                          --hardware-map hardware_map.txt \
                           --figures figures \
                           --doi-map reserved_dois.json
 ```
+
+Both scripts read run folders under `--runs-root` (default `/mnt/e/QUANT_EVAL/runs`).
+`make_figures.py` needs matplotlib; `build_datasets.py` needs only the standard library.
 
 `--dry-run` discovers and verifies without writing. The build **aborts** rather
 than warns on any source digest mismatch, any pass rate that fails to recompute
 from raw rows, or any forbidden token reaching an output file.
 
 Only the sanitized `publication/` subdirectory of a run folder is ever read.
+
+## Figure 4 and D7 v1.0.1
+
+The two Modal pairs ran their full-weight lane on an A100 and their quantized lane
+on an A10G, so their wall-time ratios below 1.0 measure the hardware difference, not
+quantization. D7 v1.0.1 added `baseline_accelerator`, `quantized_accelerator` and
+`hardware_matched_pair`, and Figure 4 now labels every bar with both lanes'
+accelerators and hatches the hardware-unmatched pairs. Earlier versions of Figure 4
+drew those two pairs as "slower under quantization"; that reading was wrong and is
+withdrawn. Figure 2's annotation now states the share of Q4_K_M's storage saving that
+Q5_K_M already delivers, computed from the rollups (earlier text said "two-thirds").
 
 ## The datasets
 

@@ -1,0 +1,12 @@
+# quant_eval public corpus — accelerator per lane, declared by the owner.
+# Format: RUN_ID  BASELINE_ACCELERATOR  QUANTIZED_ACCELERATOR
+# The bundles do not record accelerator class, so build_datasets.py (2.5.0+)
+# requires this file for D7, and make_figures.py reads it for Figure 4.
+# hardware_matched_pair is computed from the two tokens, never declared.
+
+Mistral_Nemo_Instruct_2407_20260814_030505  nvidia_geforce_rtx_4090  nvidia_geforce_rtx_4090   # Q4_K_M, local
+Mistral_Nemo_Instruct_2407_20260815_113254  nvidia_geforce_rtx_4090  nvidia_geforce_rtx_4090   # Q5_K_M, local
+Mistral_Nemo_Instruct_2407_20260816_084553  nvidia_geforce_rtx_4090  nvidia_geforce_rtx_4090   # Q8_0, local
+Qwen2.5_7B_Instruct_20260814_234822         nvidia_geforce_rtx_4090  nvidia_geforce_rtx_4090   # 7B, local
+Qwen2.5_14B_Instruct_1M_20260815_220633     nvidia_a100_40gb         nvidia_a10g               # 14B-1M, Modal
+Qwen2.5_32B_Instruct_20260815_081051        nvidia_a100_80gb         nvidia_a10g               # 32B, Modal
