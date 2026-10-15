@@ -239,7 +239,8 @@ forest(
 fig, ax1 = plt.subplots(figsize=(8.2, 5.0))
 order = ["Q8_0", "Q5_K_M", "Q4_K_M"]
 xs = [D[k]["_foot"]["red"] * 100 for k in order]
-sig = [sum(1 for f in FAM if D[k][f]["p"] < 0.05) for k in order]
+# degraded = significant (exact McNemar p < 0.05) AND the quantized lane scored lower; an improvement is not a loss
+sig = [sum(1 for f in FAM if D[k][f]["p"] < 0.05 and D[k][f]["delta"] < 0) for k in order]
 gb = [D[k]["_foot"]["quant"] / 1e9 for k in order]
 
 ax1.plot(xs, sig, color="#999999", lw=1.4, zorder=2, linestyle="--")
